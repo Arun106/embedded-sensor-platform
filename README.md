@@ -1,74 +1,97 @@
-# Thermal Controller — CI/CD and Virtual Target Verification
+# Embedded Sensor Platform
 
-A small original C++ application with CMake, CTest, pytest, Robot Framework, an explicit release policy, Docker Hub candidate publication, manual approval, Ansible release execution, and Grafana module metrics.
+A small C++17 thermal-controller demonstrator with automated testing, release
+gates, virtual-target verification, deployment playbooks, and Grafana metrics.
 
-## Architecture and module names
-See [monitoring/MODULE-ARCHITECTURE.md](monitoring/MODULE-ARCHITECTURE.md) for the module mapping, dashboard meanings and refresh instructions.
+The application is a one-shot command. It models a cooling request only; it
+does not connect to physical sensors or actuators.
 
-- temperature_input: sensor readings and boundaries
-- threshold_control: configurable control threshold
-- cooling_output: software cooling request only; no physical actuator interface
-- fault_diagnostics: invalid and corrupt input rejection
-- firmware_identity: expected candidate release version
+## What is included
 
-Host and QEMU target tests verify the same demonstrator at different execution layers. QEMU is virtual-target verification; physical HiL sensor/actuator I/O is not implemented. The application remains a one-shot command.
-Host suite: 21 cases; QEMU suite: 19 cases. Overlapping test layers demonstrate automation and are not a requirement coverage or safety score.
+- CMake and CTest build for the C++ application.
+- Pytest and Robot Framework acceptance tests.
+- QEMU-oriented virtual-target tests and policy.
+- A release gate that checks test coverage, critical tests, and report files.
+- Jenkins, Docker, Ansible, and Grafana configuration for the delivery flow.
 
-## Release policy
-Full-suite rate = passed / all reported cases * 100. Skips remain in the denominator.
-Require strictly >90%, every critical test passed, no execution errors, all reports/frameworks and all modules present, and at least 21 host cases (19 for QEMU).
-Exactly 90% fails. For the 21-case host suite one noncritical failure can be accepted (20/21=95.24%); any critical failure blocks release regardless of rate.
-An authorized reviewer must still approve release. Decide real production criteria with the team.
-Missing reports and malformed XML block the gate. Update config/test-policy.json through review as the test inventory changes.
-Jenkins JUnit deliberately does not set UNSTABLE automatically: the explicit gate decides eligibility. Failed tests stay visible in test reports and triage.
-The runtime image security gate separately rejects HIGH/CRITICAL findings; the test percentage cannot override it.
+## Project layout
 
-## Local first run (Ubuntu)
+| Folder | Purpose |
+| --- | --- |
+| `app/` | Thermal-controller source code and C++ unit tests. |
+| `tests/` | Pytest, Robot Framework, release-policy, and QEMU tests. |
+| `scripts/` | Full test runner and release-gate tools. |
+| `config/` | Test policy and release metadata. |
+| `ansible/` | Deployment and QEMU activation playbooks. |
+| `monitoring/` | Grafana dashboards and metrics configuration. |
+| `docs/` | Operational notes, milestones, and bug workflow. |
+
+## Quick start
+
+Requirements: CMake, a C++17 compiler, Ninja, Python 3, and `venv` support.
+
 ```bash
-sudo apt update
-sudo apt install -y build-essential cmake ninja-build python3-venv
 python3 -m venv .venv
 . .venv/bin/activate
 pip install -r requirements-test.txt
+
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DAPP_VERSION=0.1.0-local
 cmake --build build --parallel 2
 python scripts/run_tests.py --version 0.1.0-local
-cat reports/summary.json
 ```
-Docker alternative (no host tool installation):
+
+Test reports are written to `reports/`. Check `reports/summary.json` after a
+full run.
+
+## Run individual test suites
+
 ```bash
-docker build --target builder --build-arg APP_VERSION=0.1.0-local -t embedded-sensor-tests:local .
-docker create --name sensor-tests-local embedded-sensor-tests:local python3 scripts/run_tests.py --version 0.1.0-local
-docker start -a sensor-tests-local
-mkdir -p reports
-docker cp sensor-tests-local:/app/reports/. reports/
-docker rm sensor-tests-local
+ctest --test-dir build --output-on-failure
+python -m pytest tests/pytest -q
+python -m robot --outputdir reports/robot --xunit reports/robot.xml tests/robot
 ```
-Use a unique container name if an earlier test container still exists. Preserve the test exit status in automation; Jenkinsfile does so.
 
-## Jenkins setup
-1. Put this project in YOUR own Git repository (not ttroy50/cmake-examples).
-2. Create a Pipeline from SCM using that repo and Script Path Jenkinsfile. Agent needs Linux, Git, Docker and curl; no CMake or Ansible host installation is required.
-3. Create a Docker Hub repository embedded-sensor-gateway.
-4. Jenkins Credentials: username/password type, ID dockerhub-creds; username Docker Hub ID; password scoped access token. Never put it in Git.
-5. Set IMAGE_REPOSITORY to your namespace/embedded-sensor-gateway. Leave PUSHGATEWAY_URL empty until monitoring is configured. Pipeline parameters may appear after the first run; the placeholder intentionally fails validation rather than pushing elsewhere.
-6. Review the reports, approve the input step and check Ansible output. Manual input is a lab approval; production governance should restrict approvers and protect Jenkinsfile changes.
-7. Registry digest selects the exact published candidate. Ansible authenticates in an ephemeral runner, pulls that digest, verifies version and executes a sensor smoke test. Docker socket access is host-admin-equivalent; run only trusted pipeline code.
+## Release gate
 
-## Registry portability
-Docker Hub initially. JFrog Artifactory/other OCI registries can replace it by changing registry endpoint, image path, credentials and login command.
-Current Jenkinsfile intentionally validates a Docker Hub namespace/repository; adapt that validation when adding a private hostname/path.
-Artifactory's Docker repository is itself a registry. Generic firmware packages and reports use appropriate generic repositories; they are not automatically container images.
-Publish immutable candidate versions and promote the same digest after approval. Do not rebuild during CD.
+The release policy requires:
 
-## Observability
-Follow monitoring/START.md. Import monitoring/module-dashboard.json. Module metrics come from actual XML reports; no fabricated outcomes.
-Jenkins metrics still provide whole-pipeline build outcomes. For bugs, read docs/BUG_WORKFLOW.md.
+- More than 90% of all reported tests to pass.
+- Every critical test to pass.
+- No execution errors and all expected reports to be present.
+- At least 21 host cases, or 19 QEMU cases.
 
-## Next increments
-1. Persistent application service and separate post-deployment suites.
-2. Yocto image and package recipe, package ptest if required, QEMU boot, SSH adapter and target acceptance tests.
-3. External issue tracker synchronization; verified fix history.
-4. Target-health and deployment metrics in addition to test metrics.
-5. Reviewed module impact selection for PRs; keep full-suite release qualification.
-Dependencies use bounded versions and base tags for this starter. Lock package versions and image digests after validating your environment.
+Exactly 90% does not pass. See `config/test-policy.json` for the host policy
+and `config/qemu-test-policy.json` for the virtual-target policy.
+
+## Delivery and monitoring
+
+The Jenkins pipeline builds a candidate image, runs the release gate, waits for
+manual approval, and deploys the approved image digest through Ansible.
+
+Before using the pipeline, set your own Docker Hub image namespace and create
+the `dockerhub-creds` Jenkins credential. Never commit tokens or passwords.
+
+### Trigger Jenkins from GitHub
+
+The pipeline uses the GitHub push trigger. In Jenkins, create a **Pipeline from
+SCM** job that points to this repository and uses `Jenkinsfile`. Then add a
+GitHub webhook at:
+
+```text
+https://<your-jenkins-host>/github-webhook/
+```
+
+Select the **Pushes** event. A push to the configured branch will then start a
+new build. Jenkins must be reachable from GitHub; use a secure public endpoint
+or a GitHub App/integration appropriate for your environment.
+
+For metrics and dashboards, start with [monitoring/START.md](monitoring/START.md)
+and [monitoring/MODULE-ARCHITECTURE.md](monitoring/MODULE-ARCHITECTURE.md).
+
+## Current scope
+
+QEMU validation is virtual-target verification, not physical hardware testing.
+Physical sensor/actuator I/O, Yocto integration, and external issue-tracker
+synchronization are future work.
+
+For contributor commands and conventions, see [AGENTS.md](AGENTS.md).

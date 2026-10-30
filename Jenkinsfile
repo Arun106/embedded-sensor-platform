@@ -6,6 +6,10 @@ pipeline {
         disableConcurrentBuilds()
         buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: '5'))
     }
+    triggers {
+        // Requires the GitHub plugin and a repository webhook to Jenkins.
+        githubPush()
+    }
     parameters {
         string(name: 'IMAGE_REPOSITORY', defaultValue: 'arunbelursan/embedded-sensor-gateway', description: 'Docker Hub namespace/repository')
         string(name: 'PUSHGATEWAY_URL', defaultValue: '', description: 'Reachable from Jenkins host; leave empty to skip telemetry')
