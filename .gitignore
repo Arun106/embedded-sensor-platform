@@ -5,3 +5,6 @@ dist/
 __pycache__/
 .pytest_cache/
 *.log
+
+# Local QEMU images and runtime files
+.qemu/
