@@ -1,0 +1,15 @@
+{
+  "threshold_percent": 90,
+  "minimum_tests": 19,
+  "required_frameworks": [
+    "ctest",
+    "pytest",
+    "robot"
+  ],
+  "required_modules": [
+    "temperature",
+    "configuration",
+    "faults",
+    "release"
+  ]
+}

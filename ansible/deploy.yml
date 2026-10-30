@@ -1,0 +1,42 @@
+---
+- name: Pull approved digest and validate container release on lab Docker host
+  hosts: localhost
+  gather_facts: false
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    image_ref: "{{ lookup('ansible.builtin.env', 'RELEASE_REF') }}"
+    expected_version: "{{ lookup('ansible.builtin.env', 'EXPECTED_VERSION') }}"
+  tasks:
+    - name: Require an immutable release reference
+      ansible.builtin.assert:
+        that:
+          - image_ref is match('^[a-zA-Z0-9./:_-]+@sha256:[a-f0-9]{64}$')
+          - expected_version | length > 0
+    - name: Authenticate ephemeral Docker client
+      ansible.builtin.command:
+        argv: [docker, login, --username, "{{ lookup('ansible.builtin.env', 'REGISTRY_USER') }}", --password-stdin]
+        stdin: "{{ lookup('ansible.builtin.env', 'REGISTRY_PASSWORD') }}"
+        stdin_add_newline: false
+      no_log: true
+      changed_when: false
+    - name: Pull approved release
+      ansible.builtin.command:
+        argv: [docker, pull, "{{ image_ref }}"]
+      register: pulled
+      changed_when: "'Downloaded newer image' in pulled.stdout"
+    - name: Read version from deployed artifact
+      ansible.builtin.command:
+        argv: [docker, run, --rm, --network, none, "{{ image_ref }}", --version]
+      register: version_check
+      changed_when: false
+    - name: Verify deployed version
+      ansible.builtin.assert:
+        that: version_check.stdout | trim == expected_version
+    - name: Execute post-deployment smoke test
+      ansible.builtin.command:
+        argv: [docker, run, --rm, --network, none, "{{ image_ref }}", read, '25']
+      register: smoke
+      changed_when: true
+    - name: Validate sensor state
+      ansible.builtin.assert:
+        that: (smoke.stdout | from_json).state == 'NORMAL'

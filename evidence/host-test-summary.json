@@ -1,0 +1,23 @@
+{
+  "total": 19,
+  "passed": 19,
+  "pass_rate_percent": 100.0,
+  "critical_nonpassing": 0,
+  "gate_passed": true,
+  "reasons": [],
+  "modules": {
+    "temperature": {
+      "passed": 8
+    },
+    "configuration": {
+      "passed": 5
+    },
+    "faults": {
+      "passed": 4
+    },
+    "release": {
+      "passed": 2
+    }
+  },
+  "timestamp": 1793293264
+}
