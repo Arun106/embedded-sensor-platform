@@ -174,7 +174,7 @@ pipeline {
                                 set -eu
                                 curl --fail --silent --show-error --connect-timeout 5 --max-time 15 \
                                   --request PUT --data-binary @reports/metrics.prom \
-                                  "$METRICS_URL/metrics/job/embedded_sensor_pipeline"
+                                  "$METRICS_URL/metrics/job/embedded_sensor_pipeline/target/host"
                             '''
                         }
                     }

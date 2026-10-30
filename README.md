@@ -1,25 +1,23 @@
-# Embedded Sensor Platform — Jenkins increment 1
+# Thermal Controller — CI/CD and Virtual Target Verification
 
 A small original C++ application with CMake, CTest, pytest, Robot Framework, an explicit release policy, Docker Hub candidate publication, manual approval, Ansible release execution, and Grafana module metrics.
 
-## Honest scope
-- This increment is a HOST/container pipeline. It does NOT boot QEMU, flash firmware, implement a Yocto layer, or constitute physical HiL.
-- The application is a one-shot command, not a persistent telemetry service.
-- Confirmed bugs are tracked in reviewed bugs/bugs.json for now. Failure triage is automatic; Azure Boards/Jira synchronization is NOT implemented.
-- Jenkins orchestration, container builds, registry push/pull, Ansible execution and Grafana import need verification on your machine. Host compilation and all test suites were exercised during preparation; see VALIDATION.md.
+## Architecture and module names
+See [monitoring/MODULE-ARCHITECTURE.md](monitoring/MODULE-ARCHITECTURE.md) for the module mapping, dashboard meanings and refresh instructions.
 
-## Modules and tests
-- temperature: boundaries and normal readings
-- configuration: valid/custom thresholds and rejected configuration
-- faults: malformed, non-finite and out-of-range input
-- release: exact expected version
-19 reported test cases: 1 CTest case (several C++ assertions), 14 pytest cases, 4 Robot cases.
-Suites overlap intentionally to demonstrate different test layers; pass rate is an unweighted case count, not a safety measure or coverage score.
+- temperature_input: sensor readings and boundaries
+- threshold_control: configurable control threshold
+- cooling_output: software cooling request only; no physical actuator interface
+- fault_diagnostics: invalid and corrupt input rejection
+- firmware_identity: expected candidate release version
+
+Host and QEMU target tests verify the same demonstrator at different execution layers. QEMU is virtual-target verification; physical HiL sensor/actuator I/O is not implemented. The application remains a one-shot command.
+Host suite: 21 cases; QEMU suite: 19 cases. Overlapping test layers demonstrate automation and are not a requirement coverage or safety score.
 
 ## Release policy
 Full-suite rate = passed / all reported cases * 100. Skips remain in the denominator.
-Require strictly >90%, every critical test passed, no execution errors, all reports/frameworks and all modules present, and at least 19 cases.
-Exactly 90% fails. For this 19-case suite one noncritical failure can be accepted (18/19=94.74%); any critical failure blocks release regardless of rate.
+Require strictly >90%, every critical test passed, no execution errors, all reports/frameworks and all modules present, and at least 21 host cases (19 for QEMU).
+Exactly 90% fails. For the 21-case host suite one noncritical failure can be accepted (20/21=95.24%); any critical failure blocks release regardless of rate.
 An authorized reviewer must still approve release. Decide real production criteria with the team.
 Missing reports and malformed XML block the gate. Update config/test-policy.json through review as the test inventory changes.
 Jenkins JUnit deliberately does not set UNSTABLE automatically: the explicit gate decides eligibility. Failed tests stay visible in test reports and triage.

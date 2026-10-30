@@ -5,7 +5,7 @@ For this starter, bugs/bugs.json is a reviewed local tracker, not an Azure Board
 Only confirmed records contribute to tracked-bug dashboard panels. Start with []: no synthetic bugs are seeded.
 Example record (replace values with actual evidence):
 ```json
-{"id":"BUG-001","module":"temperature","state":"open","test_id":"stable identifier from triage.json","description":"Observed behavior","fix_commit":null,"verified_build":null}
+{"id":"BUG-001","module":"temperature_input","state":"open","test_id":"stable identifier from triage.json","description":"Observed behavior","fix_commit":null,"verified_build":null}
 ```
 Use states open, resolved, closed. Resolved requires fix_commit. Closed additionally requires verified_build and review of the regression evidence.
 Do not mark bugs fixed because an unrelated rerun passed. Keep fixed-test evidence and issue links in release notes.

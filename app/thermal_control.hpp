@@ -3,7 +3,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-namespace sensor {
+namespace thermal_control {
 inline double parse(const std::string& input) {
     std::size_t consumed = 0;
     const double value = std::stod(input, &consumed);

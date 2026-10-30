@@ -1,15 +1,16 @@
 {
   "threshold_percent": 90,
-  "minimum_tests": 19,
+  "minimum_tests": 21,
   "required_frameworks": [
     "ctest",
     "pytest",
     "robot"
   ],
   "required_modules": [
-    "temperature",
-    "configuration",
-    "faults",
-    "release"
+    "temperature_input",
+    "threshold_control",
+    "cooling_output",
+    "fault_diagnostics",
+    "firmware_identity"
   ]
 }

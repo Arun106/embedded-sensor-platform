@@ -1,4 +1,4 @@
-#include "sensor.hpp"
+#include "thermal_control.hpp"
 #include <iostream>
 #ifndef APP_VERSION
 #define APP_VERSION "unknown"
@@ -12,10 +12,10 @@ int main(int argc, char* argv[]) {
         return 2;
     }
     try {
-        const double value = sensor::parse(argv[2]);
-        const double threshold = argc == 4 ? sensor::parse(argv[3]) : 80.0;
-        const auto state = sensor::classify(value, threshold);
-        std::cout << "{\"module\":\"temperature\",\"state\":\"" << state
+        const double value = thermal_control::parse(argv[2]);
+        const double threshold = argc == 4 ? thermal_control::parse(argv[3]) : 80.0;
+        const auto state = thermal_control::classify(value, threshold);
+        std::cout << "{\"module\":\"temperature_input\",\"state\":\"" << state
                   << "\",\"value\":" << value << ",\"threshold\":" << threshold << "}\n";
         return state == "INVALID" ? 2 : 0;
     } catch (const std::exception&) {

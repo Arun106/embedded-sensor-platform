@@ -16,7 +16,7 @@ def evaluate(report_dir, policy, bugs):
             reasons.append(f'{framework}: missing/invalid report: {exc}');continue
         for case in cases:
             name=case.get('name',''); identity=case.get('classname','')+'::'+name
-            match=re.search(r'(temperature|configuration|faults|release)__',name)
+            match=re.search(r'(?:test_)?('+'|'.join(map(re.escape, policy['required_modules']))+r')__',name)
             if not match:
                 reasons.append(f'unmapped test: {identity}'); continue
             module=match.group(1)

@@ -53,7 +53,7 @@ test_id=$(docker create --network host \
         chmod 600 /run/sensor-lab-key
         mkdir -p reports/qemu
         set +e
-        python3 -m pytest tests/qemu/test_target.py -v --junitxml=reports/qemu/pytest.xml
+        python3 -m pytest tests/qemu/test_thermal_target.py -v --junitxml=reports/qemu/pytest.xml
         pytest_status=$?
         python3 -m robot --pythonpath tests/qemu --outputdir reports/qemu \
             --xunit robot.xml tests/qemu/acceptance.robot

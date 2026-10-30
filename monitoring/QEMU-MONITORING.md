@@ -54,7 +54,7 @@ In Jenkins Build with Parameters:
 
     PUSHGATEWAY_URL=http://127.0.0.1:9091
 
-Jenkins publishes build metrics to `/metrics/job/embedded_sensor_pipeline` and QEMU metrics to `/metrics/job/embedded_sensor_pipeline/target/qemu`. Distinct groups avoid overwriting each other.
+Jenkins publishes build metrics to `/metrics/job/embedded_sensor_pipeline/target/host` and QEMU metrics to `/metrics/job/embedded_sensor_pipeline/target/qemu`. Distinct groups avoid overwriting each other.
 
 ## 4. Import the dashboard
 
@@ -73,7 +73,7 @@ Example query in Explore:
 
     embedded_module_pass_rate_percent{job="embedded_sensor_pipeline",target="qemu"}
 
-Expected module labels: temperature, configuration, faults, release.
+Expected module labels: temperature_input, threshold_control, cooling_output, fault_diagnostics, firmware_identity. See MODULE-ARCHITECTURE.md for the updated dashboard imports.
 
 Freshness query:
 

@@ -8,10 +8,10 @@
       "pluginName": "Prometheus"
     }
   ],
-  "title": "Embedded Sensor \u2014 Modules and Release Quality",
+  "title": "Thermal Controller — Module Verification",
   "uid": "embedded-sensor-modules",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "15s",
   "time": {
     "from": "now-6h",
@@ -35,14 +35,17 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "embedded_test_pass_rate_percent",
+          "expr": "embedded_test_pass_rate_percent{job=\"embedded_sensor_pipeline\",target=~\"${result_target:regex}\"}",
           "instant": true,
-          "format": "time_series"
+          "format": "time_series",
+          "legendFormat": "Selected result source"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "min": 0
+          "min": 0,
+          "unit": "percent",
+          "max": 100
         },
         "overrides": []
       },
@@ -53,7 +56,8 @@
           ],
           "values": false
         }
-      }
+      },
+      "description": "Latest published test snapshot; 100% means all reported tests passed. See result age. A test gate is not deployment or physical hardware health."
     },
     {
       "id": 2,
@@ -72,14 +76,30 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "embedded_test_gate_passed",
+          "expr": "embedded_test_gate_passed{job=\"embedded_sensor_pipeline\",target=~\"${result_target:regex}\"}",
           "instant": true,
-          "format": "time_series"
+          "format": "time_series",
+          "legendFormat": "Selected result source"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "min": 0
+          "min": 0,
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "BLOCKED",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "PASSED",
+                  "color": "green"
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
@@ -90,7 +110,8 @@
           ],
           "values": false
         }
-      }
+      },
+      "description": "Latest published test snapshot; 100% means all reported tests passed. See result age. A test gate is not deployment or physical hardware health."
     },
     {
       "id": 3,
@@ -109,14 +130,17 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "embedded_module_pass_rate_percent",
+          "expr": "embedded_module_pass_rate_percent{job=\"embedded_sensor_pipeline\",target=~\"${result_target:regex}\",module=~\"temperature_input|threshold_control|cooling_output|fault_diagnostics|firmware_identity\"}",
           "instant": true,
-          "format": "time_series"
+          "format": "time_series",
+          "legendFormat": "{{module}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "min": 0
+          "min": 0,
+          "unit": "percent",
+          "max": 100
         },
         "overrides": []
       },
@@ -127,7 +151,8 @@
           ],
           "values": false
         }
-      }
+      },
+      "description": "Latest published test snapshot; 100% means all reported tests passed. See result age. A test gate is not deployment or physical hardware health."
     },
     {
       "id": 4,
@@ -146,9 +171,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "embedded_test_cases",
+          "expr": "embedded_test_cases{job=\"embedded_sensor_pipeline\",target=~\"${result_target:regex}\",module=~\"temperature_input|threshold_control|cooling_output|fault_diagnostics|firmware_identity\"}",
           "instant": true,
-          "format": "table"
+          "format": "table",
+          "legendFormat": "{{module}} / {{status}}"
         }
       ],
       "fieldConfig": {
@@ -164,7 +190,8 @@
           ],
           "values": false
         }
-      }
+      },
+      "description": "Latest published test snapshot; 100% means all reported tests passed. See result age. A test gate is not deployment or physical hardware health."
     },
     {
       "id": 5,
@@ -183,9 +210,10 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "embedded_tracked_bugs",
+          "expr": "embedded_tracked_bugs{job=\"embedded_sensor_pipeline\",target=~\"${result_target:regex}\",module=~\"temperature_input|threshold_control|cooling_output|fault_diagnostics|firmware_identity\"}",
           "instant": true,
-          "format": "table"
+          "format": "table",
+          "legendFormat": "{{module}} / {{state}}"
         }
       ],
       "fieldConfig": {
@@ -201,7 +229,8 @@
           ],
           "values": false
         }
-      }
+      },
+      "description": "Latest published test snapshot; 100% means all reported tests passed. See result age. A test gate is not deployment or physical hardware health."
     },
     {
       "id": 6,
@@ -220,14 +249,16 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "time() - embedded_test_last_run_timestamp_seconds",
+          "expr": "time() - embedded_test_last_run_timestamp_seconds{job=\"embedded_sensor_pipeline\",target=~\"${result_target:regex}\"}",
           "instant": true,
-          "format": "time_series"
+          "format": "time_series",
+          "legendFormat": "Selected result source"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "min": 0
+          "min": 0,
+          "unit": "s"
         },
         "overrides": []
       },
@@ -238,12 +269,63 @@
           ],
           "values": false
         }
+      },
+      "description": "Latest published test snapshot; 100% means all reported tests passed. See result age. A test gate is not deployment or physical hardware health."
+    },
+    {
+      "id": 90,
+      "title": "Thermal control path and test scope",
+      "type": "text",
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 24,
+        "h": 6
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**Temperature input → Threshold control → Cooling output (software request)**\n\n**Fault diagnostics** checks invalid input; **Firmware identity** checks the candidate version.\n\nNORMAL = no cooling request; OVERHEAT = cooling requested. No fan, relay, PWM or physical sensor I/O is driven. Host and QEMU are software verification layers; physical HiL is a future extension.\n\nA 100% pass rate means all tests in the selected snapshot passed. It is not a hardware-health or coverage score."
       }
     }
   ],
   "tags": [
-    "embedded",
-    "quality",
-    "modules"
-  ]
+    "thermal-control",
+    "virtual-target",
+    "test-quality"
+  ],
+  "description": "Select one result source. Temperature input, threshold control, software cooling output, diagnostics and firmware identity. QEMU is virtual-target verification, not physical HiL.",
+  "templating": {
+    "list": [
+      {
+        "name": "result_target",
+        "label": "Result source",
+        "type": "custom",
+        "query": "Host build : host,QEMU target : qemu,Alert simulation : qemu-simulation",
+        "current": {
+          "selected": true,
+          "text": "QEMU target",
+          "value": "qemu"
+        },
+        "options": [
+          {
+            "text": "Host build",
+            "value": "host",
+            "selected": false
+          },
+          {
+            "text": "QEMU target",
+            "value": "qemu",
+            "selected": true
+          },
+          {
+            "text": "Alert simulation",
+            "value": "qemu-simulation",
+            "selected": false
+          }
+        ],
+        "multi": false,
+        "includeAll": false
+      }
+    ]
+  }
 }

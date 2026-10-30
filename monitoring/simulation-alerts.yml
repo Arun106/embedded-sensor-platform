@@ -1,0 +1,12 @@
+groups:
+  - name: thermal-controller-simulation
+    rules:
+      - alert: SimulatedTestPassRateDegraded
+        expr: embedded_test_pass_rate_percent{job="embedded_sensor_pipeline",target="qemu-simulation"} < 95
+        for: 1m
+        labels:
+          severity: warning
+          simulation: "true"
+        annotations:
+          summary: "SIMULATION: thermal controller test pass rate below 95%"
+          description: "Synthetic verification pass rate is {{ $value }}%. Includes temperature input, threshold control and software cooling output."

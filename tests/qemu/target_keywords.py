@@ -1,5 +1,5 @@
 import json
-from test_target import run_target as _run_target
+from test_thermal_target import run_target as _run_target
 
 def verify_reading(value, expected_state, threshold=None):
     arguments = ['read', value]
