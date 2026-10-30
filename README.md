@@ -93,5 +93,3 @@ and [monitoring/MODULE-ARCHITECTURE.md](monitoring/MODULE-ARCHITECTURE.md).
 QEMU validation is virtual-target verification, not physical hardware testing.
 Physical sensor/actuator I/O, Yocto integration, and external issue-tracker
 synchronization are future work.
-
-For contributor commands and conventions, see [AGENTS.md](AGENTS.md).
