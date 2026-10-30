@@ -8,7 +8,7 @@
       "pluginName": "Prometheus"
     }
   ],
-  "title": "Thermal Controller — Host Build vs QEMU",
+  "title": "Controller — Host Build vs QEMU",
   "uid": "embedded-sensor-build-qemu",
   "schemaVersion": 39,
   "version": 2,

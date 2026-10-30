@@ -16,8 +16,8 @@ Gate reads module prefixes from config/test-policy.json or config/qemu-test-poli
 
 ## Two dashboards with distinct purposes
 
-- Thermal Controller — Module Verification: choose Host build, QEMU target or Alert simulation. One overall result and named module bars for the selected source.
-- Thermal Controller — Host Build vs QEMU: compare build verification on the left with virtual-target verification on the right. Synthetic results are excluded.
+- Controller — Module Verification: choose Host build, QEMU target or Alert simulation. One overall result and named module bars for the selected source.
+- Controller — Host Build vs QEMU: compare build verification on the left with virtual-target verification on the right. Synthetic results are excluded.
 
 Existing dashboard UIDs are preserved so imports overwrite the previous dashboards instead of creating additional copies. Existing installed dashboards are not changed by git pull alone.
 

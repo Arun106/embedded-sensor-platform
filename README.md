@@ -1,6 +1,6 @@
 # Embedded Sensor Platform
 
-A small C++17 thermal-controller demonstrator with automated testing, release
+A small C++17 controller demonstrator with automated testing, release
 gates, virtual-target verification, deployment playbooks, and Grafana metrics.
 
 The application is a one-shot command. It models a cooling request only; it
