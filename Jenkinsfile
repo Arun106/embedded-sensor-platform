@@ -58,6 +58,22 @@ pipeline {
                 }
             }
         }
+        stage('Simulated board upgrade checks') {
+            steps {
+                sh '''
+                    set -eu
+                    docker build -t embedded-board-simulation:local board-upgrade/
+                    simulation_id="$(docker create embedded-board-simulation:local)"
+                    cleanup() { docker rm "$simulation_id" >/dev/null || true; }
+                    trap cleanup EXIT
+                    simulation_status=0
+                    docker start -a "$simulation_id" > reports/board-upgrade-simulation.log 2>&1 || simulation_status=$?
+                    cat reports/board-upgrade-simulation.log
+                    docker cp "$simulation_id:/work/reports/." reports/
+                    exit "$simulation_status"
+                '''
+            }
+        }
         stage('Build runtime') {
             steps {
                 sh '''
