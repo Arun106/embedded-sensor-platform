@@ -122,7 +122,7 @@ pipeline {
                     env.RELEASE_REF = readFile('dist/release-ref.txt').trim()
                     if (!env.RELEASE_REF.matches('[a-zA-Z0-9./:_-]+@sha256:[a-f0-9]{64}')) error('Invalid candidate digest.')
                 }
-                sh 'docker build --progress=plain -t embedded-sensor-ansible:local ansible/'
+                sh 'docker build --network=host --progress=plain -t embedded-sensor-ansible:local ansible/'
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'REGISTRY_USER', passwordVariable: 'REGISTRY_PASSWORD')]) {
                     sh '''
                         set +x
@@ -140,7 +140,7 @@ pipeline {
 
         stage('QEMU candidate tests and activation') {
             steps {
-                sh 'docker build --progress=plain --build-arg TEST_IMAGE="$TEST_IMAGE" -f Dockerfile.qemu-tests -t "$QEMU_TEST_IMAGE" .'
+                sh 'docker build --network=host --progress=plain --build-arg TEST_IMAGE="$TEST_IMAGE" -f Dockerfile.qemu-tests -t "$QEMU_TEST_IMAGE" .'
                 script {
                     def targetStatus = 1
                     try {
