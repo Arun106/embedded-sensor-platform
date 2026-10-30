@@ -1,0 +1,11 @@
+{
+  "mode": "simulation",
+  "board_model": "sensor-board-sim",
+  "supported_board_revisions": ["A"],
+  "target_firmware": "3.0.0",
+  "upgrade_paths": {
+    "1.0.0": ["2.0.0", "3.0.0"],
+    "2.0.0": ["3.0.0"],
+    "3.0.0": []
+  }
+}

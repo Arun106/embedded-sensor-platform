@@ -1,101 +1,73 @@
 ---
-- name: Deploy and verify sensor application on QEMU
+- name: Prepare and verify QEMU release candidate
   hosts: sensor_target
   gather_facts: false
   become: true
-
   vars:
-    app_version: "0.1.5"
+    app_version: "{{ lookup('ansible.builtin.env', 'EXPECTED_VERSION') }}"
     release_dir: "/opt/sensor-gateway/releases/{{ app_version }}"
     candidate_binary: "{{ release_dir }}/sensor-gateway"
-
   tasks:
-    - name: Calculate source binary checksum inside Ansible runner
+    - name: Validate requested version
+      ansible.builtin.assert:
+        that:
+          - app_version is match('^[0-9]+[.][0-9]+[.][0-9]+$')
+    - name: Calculate source checksum
       ansible.builtin.stat:
         path: /automation/artifact/sensor-gateway
         checksum_algorithm: sha256
       delegate_to: localhost
       become: false
       register: source_binary
-
-    - name: Require the release binary
+    - name: Require release binary
       ansible.builtin.assert:
         that:
           - source_binary.stat.exists
           - source_binary.stat.isreg | default(false)
-
-    - name: Install C++ runtime dependencies on the target
+    - name: Ensure C++ runtime libraries
       ansible.builtin.apt:
-        name:
-          - libstdc++6
-          - libgcc-s1
+        name: [libstdc++6, libgcc-s1]
         state: present
         update_cache: true
         cache_valid_time: 3600
-
-    - name: Create versioned release directory
+    - name: Create versioned candidate directory
       ansible.builtin.file:
         path: "{{ release_dir }}"
         state: directory
         owner: root
         group: root
         mode: '0755'
-
-    - name: Transfer release binary
+    - name: Transfer candidate binary
       ansible.builtin.copy:
         src: /automation/artifact/sensor-gateway
         dest: "{{ candidate_binary }}"
         owner: root
         group: root
         mode: '0755'
-
-    - name: Calculate transferred binary checksum
+    - name: Calculate transferred checksum
       ansible.builtin.stat:
         path: "{{ candidate_binary }}"
         checksum_algorithm: sha256
       register: target_binary
-
     - name: Verify transfer integrity
       ansible.builtin.assert:
-        that:
-          - target_binary.stat.checksum == source_binary.stat.checksum
-        success_msg: "Source and target SHA-256 checksums match."
-
-    - name: Read candidate application version
+        that: target_binary.stat.checksum == source_binary.stat.checksum
+    - name: Read candidate version
       ansible.builtin.command:
-        argv:
-          - "{{ candidate_binary }}"
-          - --version
-      register: version_result
+        argv: ["{{ candidate_binary }}", --version]
+      register: candidate_version
       changed_when: false
-
-    - name: Verify expected application version
+    - name: Verify candidate version
       ansible.builtin.assert:
-        that:
-          - version_result.stdout | trim == app_version
-
-    - name: Run candidate sensor smoke test
+        that: candidate_version.stdout | trim == app_version
+    - name: Run candidate smoke test
       ansible.builtin.command:
-        argv:
-          - "{{ candidate_binary }}"
-          - read
-          - "25"
-      register: smoke_result
+        argv: ["{{ candidate_binary }}", read, '25']
+      register: smoke
       changed_when: false
-
-    - name: Verify sensor response
+    - name: Verify smoke response
       ansible.builtin.assert:
-        that:
-          - (smoke_result.stdout | from_json).state == 'NORMAL'
-
-    - name: Activate verified application
-      ansible.builtin.file:
-        src: "{{ candidate_binary }}"
-        dest: /usr/local/bin/sensor-gateway
-        state: link
-        owner: root
-        group: root
-
-    - name: Report deployment result
+        that: (smoke.stdout | from_json).state == 'NORMAL'
+    - name: Report candidate readiness
       ansible.builtin.debug:
-        msg: "Application {{ app_version }} deployed, verified and activated on QEMU."
+        msg: "Candidate {{ app_version }} ready. Active application remains unchanged until target tests pass."

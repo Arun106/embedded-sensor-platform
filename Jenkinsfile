@@ -1,13 +1,14 @@
 pipeline {
+    // Run this job on the Ubuntu node hosting QEMU (127.0.0.1:2222).
     agent any
     options {
-        timeout(time: 45, unit: 'MINUTES')
+        timeout(time: 90, unit: 'MINUTES')
         disableConcurrentBuilds()
         buildDiscarder(logRotator(numToKeepStr: '15', artifactNumToKeepStr: '5'))
     }
     parameters {
-        string(name: 'IMAGE_REPOSITORY', defaultValue: 'YOUR_DOCKERHUB_USERNAME/embedded-sensor-gateway', description: 'Docker Hub namespace/repository')
-        string(name: 'PUSHGATEWAY_URL', defaultValue: 'http://127.0.0.1:9091', description: 'Reachable from Jenkins host; leave empty to skip telemetry')
+        string(name: 'IMAGE_REPOSITORY', defaultValue: 'arunbelursan/embedded-sensor-gateway', description: 'Docker Hub namespace/repository')
+        string(name: 'PUSHGATEWAY_URL', defaultValue: '', description: 'Reachable from Jenkins host; leave empty to skip telemetry')
     }
     stages {
         stage('Checkout') {
@@ -22,6 +23,7 @@ pipeline {
                     env.IMAGE_REPOSITORY = params.IMAGE_REPOSITORY
                     env.APP_VERSION = "0.1.${env.BUILD_NUMBER}"
                     env.TEST_IMAGE = "embedded-sensor-tests:${env.BUILD_NUMBER}"
+                    env.QEMU_TEST_IMAGE = "embedded-sensor-qemu-tests:${env.BUILD_NUMBER}"
                     env.LOCAL_IMAGE = "embedded-sensor-app:${env.BUILD_NUMBER}"
                     env.REMOTE_IMAGE = "${env.IMAGE_REPOSITORY}:${env.APP_VERSION}"
                 }
@@ -110,7 +112,7 @@ pipeline {
         stage('Release approval') {
             steps {
                 timeout(time: 20, unit: 'MINUTES') {
-                    input message: 'Review module tests, security report and candidate digest. Approve local Docker release execution?', ok: 'Approve release'
+                    input message: 'Review module tests, security report and candidate digest. Approve Docker checks and QEMU candidate deployment? Activation requires the QEMU test gate.', ok: 'Approve release'
                 }
             }
         }
@@ -120,7 +122,7 @@ pipeline {
                     env.RELEASE_REF = readFile('dist/release-ref.txt').trim()
                     if (!env.RELEASE_REF.matches('[a-zA-Z0-9./:_-]+@sha256:[a-f0-9]{64}')) error('Invalid candidate digest.')
                 }
-                sh 'docker build -t embedded-sensor-ansible:local ansible/'
+                sh 'docker build --progress=plain -t embedded-sensor-ansible:local ansible/'
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'REGISTRY_USER', passwordVariable: 'REGISTRY_PASSWORD')]) {
                     sh '''
                         set +x
@@ -132,6 +134,32 @@ pipeline {
                         cat reports/deployment.log
                         exit "$deploy_status"
                     '''
+                }
+            }
+        }
+
+        stage('QEMU candidate tests and activation') {
+            steps {
+                sh 'docker build --progress=plain --build-arg TEST_IMAGE="$TEST_IMAGE" -f Dockerfile.qemu-tests -t "$QEMU_TEST_IMAGE" .'
+                script {
+                    def targetStatus = 1
+                    try {
+                        withCredentials([
+                            sshUserPrivateKey(credentialsId: 'qemu-target-ssh', keyFileVariable: 'QEMU_SSH_KEY'),
+                            file(credentialsId: 'qemu-known-hosts', variable: 'QEMU_KNOWN_HOSTS')
+                        ]) {
+                            targetStatus = sh(returnStatus: true, script: 'sh scripts/run_qemu_ci.sh')
+                        }
+                    } finally {
+                        if (fileExists('reports/qemu/pytest.xml')) {
+                            junit(testResults: 'reports/qemu/pytest.xml', allowEmptyResults: false, skipMarkingBuildUnstable: true)
+                        }
+                        if (fileExists('reports/qemu/robot.xml')) {
+                            junit(testResults: 'reports/qemu/robot.xml', allowEmptyResults: false, skipMarkingBuildUnstable: true)
+                        }
+                        archiveArtifacts(artifacts: 'reports/qemu/**,dist/qemu/*.sha256,dist/qemu/artifact/image-ref.txt', allowEmptyArchive: true)
+                    }
+                    if (targetStatus != 0) error('QEMU deployment, target test gate or activation failed. Inspect reports/qemu/.')
                 }
             }
         }
@@ -147,6 +175,19 @@ pipeline {
                                 curl --fail --silent --show-error --connect-timeout 5 --max-time 15 \
                                   --request PUT --data-binary @reports/metrics.prom \
                                   "$METRICS_URL/metrics/job/embedded_sensor_pipeline"
+                            '''
+                        }
+                    }
+                }
+
+                if (fileExists('reports/qemu/metrics.prom') && params.PUSHGATEWAY_URL?.trim()) {
+                    withEnv(["METRICS_URL=${params.PUSHGATEWAY_URL.trim()}"]) {
+                        warnError('QEMU metrics publication failed') {
+                            sh '''
+                                set -eu
+                                curl --fail --silent --show-error --connect-timeout 5 --max-time 15 \
+                                  --request PUT --data-binary @reports/qemu/metrics.prom \
+                                  "$METRICS_URL/metrics/job/embedded_sensor_pipeline/target/qemu"
                             '''
                         }
                     }

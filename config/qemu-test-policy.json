@@ -1,7 +1,10 @@
 {
   "threshold_percent": 90,
   "minimum_tests": 17,
-  "required_frameworks": ["pytest", "robot"],
+  "required_frameworks": [
+    "pytest",
+    "robot"
+  ],
   "required_modules": [
     "temperature",
     "configuration",

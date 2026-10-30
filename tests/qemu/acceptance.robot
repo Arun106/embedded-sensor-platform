@@ -2,7 +2,7 @@
 Library    target_keywords.py
 
 *** Variables ***
-${EXPECTED_VERSION}    0.1.5
+${EXPECTED_VERSION}    %{EXPECTED_VERSION=0.1.5}
 
 *** Test Cases ***
 temperature__normal_reading

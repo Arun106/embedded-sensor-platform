@@ -1,0 +1,49 @@
+---
+- name: Validate simulated board upgrade
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    release: "{{ lookup('ansible.builtin.file', '/automation/config/releases/sim-board-3.0.0.json') | from_json }}"
+    board: "{{ lookup('ansible.builtin.file', '/automation/simulation/board-state.json') | from_json }}"
+
+  tasks:
+    - name: Display detected board
+      ansible.builtin.debug:
+        msg:
+          - "Board: {{ board.board_id }}"
+          - "Model: {{ board.board_model }}"
+          - "Revision: {{ board.board_revision }}"
+          - "Current firmware: {{ board.firmware_version }}"
+          - "Requested firmware: {{ release.target_firmware }}"
+
+    - name: Check board compatibility and known starting version
+      ansible.builtin.assert:
+        that:
+          - release.mode == 'simulation'
+          - board.board_model == release.board_model
+          - board.board_revision in release.supported_board_revisions
+          - board.firmware_version in release.upgrade_paths
+        fail_msg: "STOP: unsupported board or unknown firmware version."
+
+    - name: Select documented upgrade path
+      ansible.builtin.set_fact:
+        upgrade_steps: "{{ release.upgrade_paths[board.firmware_version] }}"
+
+    - name: Validate path reaches requested firmware
+      ansible.builtin.assert:
+        that:
+          - >-
+            (upgrade_steps | length == 0 and
+             board.firmware_version == release.target_firmware)
+            or
+            (upgrade_steps | length > 0 and
+             upgrade_steps[-1] == release.target_firmware)
+        fail_msg: "STOP: upgrade path does not reach the target firmware."
+
+    - name: Show approved upgrade plan
+      ansible.builtin.debug:
+        msg:
+          - "Pre-check PASSED."
+          - "Upgrade order: {{ upgrade_steps }}"
+          - "Simulation only. No firmware has been changed."

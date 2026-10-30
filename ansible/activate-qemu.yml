@@ -1,0 +1,36 @@
+---
+- name: Activate candidate after QEMU quality gate
+  hosts: sensor_target
+  gather_facts: false
+  become: true
+  vars:
+    app_version: "{{ lookup('ansible.builtin.env', 'EXPECTED_VERSION') }}"
+    candidate_binary: "/opt/sensor-gateway/releases/{{ app_version }}/sensor-gateway"
+  tasks:
+    - name: Validate requested version
+      ansible.builtin.assert:
+        that: app_version is match('^[0-9]+[.][0-9]+[.][0-9]+$')
+    - name: Confirm candidate still reports expected version
+      ansible.builtin.command:
+        argv: ["{{ candidate_binary }}", --version]
+      register: candidate_version
+      changed_when: false
+    - name: Require expected version
+      ansible.builtin.assert:
+        that: candidate_version.stdout | trim == app_version
+    - name: Activate verified candidate
+      ansible.builtin.file:
+        src: "{{ candidate_binary }}"
+        dest: /usr/local/bin/sensor-gateway
+        state: link
+        owner: root
+        group: root
+    - name: Verify active application version
+      ansible.builtin.command:
+        argv: [/usr/local/bin/sensor-gateway, --version]
+      register: active_version
+      changed_when: false
+    - name: Confirm activation
+      ansible.builtin.assert:
+        that: active_version.stdout | trim == app_version
+        success_msg: "QEMU application release activated and verified."
