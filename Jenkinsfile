@@ -12,7 +12,7 @@ pipeline {
     }
     parameters {
         string(name: 'IMAGE_REPOSITORY', defaultValue: 'arunbelursan/embedded-sensor-gateway', description: 'Docker Hub namespace/repository')
-        string(name: 'PUSHGATEWAY_URL', defaultValue: '', description: 'Reachable from Jenkins host; leave empty to skip telemetry')
+        string(name: 'PUSHGATEWAY_URL', defaultValue: 'http://127.0.0.1:9091', description: 'Local Pushgateway reachable from the Jenkins host; override only for another endpoint')
     }
     stages {
         stage('Checkout') {
