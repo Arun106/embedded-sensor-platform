@@ -1,0 +1,38 @@
+- name: Demonstrate a firmware upgrade on a simulated board only
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+  tasks:
+    - name: Read simulated board and validate prerequisites
+      ansible.builtin.command: python3 /work/board.py read
+      register: before
+      changed_when: false
+
+    - name: Calculate documented upgrade path
+      ansible.builtin.command: python3 /work/board.py plan
+      register: upgrade_plan
+      changed_when: false
+
+    - name: Apply each simulated update in approved order
+      ansible.builtin.include_tasks: step.yml
+      loop: "{{ upgrade_plan.stdout | from_json }}"
+      loop_control:
+        loop_var: next_version
+
+    - name: Read final simulated board state
+      ansible.builtin.command: python3 /work/board.py read
+      register: after
+      changed_when: false
+
+    - name: Verify target firmware
+      ansible.builtin.assert:
+        that:
+          - (after.stdout | from_json).firmware == (lookup('file', '/work/config/release.json') | from_json).target
+
+    - name: Save explicitly labelled simulation evidence
+      ansible.builtin.copy:
+        dest: /work/reports/board-upgrade-simulation.json
+        mode: '0644'
+        content: "{{ {'simulation': true, 'before': before.stdout | from_json, 'steps': upgrade_plan.stdout | from_json, 'after': after.stdout | from_json} | to_nice_json }}"

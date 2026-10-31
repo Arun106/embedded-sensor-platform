@@ -1,0 +1,14 @@
+- name: Apply simulated firmware step
+  ansible.builtin.command:
+    argv: [python3, /work/board.py, flash, --version, "{{ next_version }}"]
+  changed_when: true
+
+- name: Independently read simulated state after step
+  ansible.builtin.command: python3 /work/board.py read
+  register: readback
+  changed_when: false
+
+- name: Stop if simulated readback does not match
+  ansible.builtin.assert:
+    that:
+      - (readback.stdout | from_json).firmware == next_version

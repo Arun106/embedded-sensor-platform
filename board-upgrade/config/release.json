@@ -1,0 +1,7 @@
+{
+  "simulation": true,
+  "board_revision": "A",
+  "required_bootloader": "1.0",
+  "target": "3",
+  "upgrade_paths": {"1": ["2", "3"], "2": ["3"], "3": []}
+}
