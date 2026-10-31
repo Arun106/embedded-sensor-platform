@@ -68,7 +68,7 @@ pipeline {
             steps {
                 sh '''
                     set -eu
-                    docker build -t embedded-board-simulation:local board-upgrade/
+                    docker build --network=host --progress=plain -t embedded-board-simulation:local board-upgrade/
                     simulation_id="$(docker create embedded-board-simulation:local)"
                     cleanup() { docker rm "$simulation_id" >/dev/null || true; }
                     trap cleanup EXIT
